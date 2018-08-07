@@ -29,3 +29,8 @@ dist
 *.res
 docs
 */__pycache__
+wix/*.msi
+wix/*.wixobj
+wix/*.wixpdb
+wix/files.wxs
+wix/version.wxi
