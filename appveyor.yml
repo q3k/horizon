@@ -10,7 +10,8 @@ environment:
 
 before_build:
     - set PATH=C:\%MSYS2_DIR%\%MSYSTEM%\bin;C:\%MSYS2_DIR%\usr\bin;%PATH%
-    - bash -c "pacman -R catgets libcatgets --noconfirm || true"
+    - bash -c "pacman -Sy --noconfirm mingw-w64-i686-openssl --overwrite '/mingw32/share/man/man3/*ssl.gz'"
+    - bash -c "pacman -Sy --noconfirm mingw-w64-x86_64-openssl --overwrite '/mingw64/share/man/man3/*ssl.gz'"
     - bash -c "pacman -Syu --noconfirm"
     - bash -c "pacman -Syu --noconfirm"
     - bash -c "pacman -S --noconfirm --needed mingw-w64-%MSYS2_ARCH%-{gcc,gtkmm3,boost,yaml-cpp,sqlite3,toolchain,zeromq,glm,libgit2,oce} zip make"
