@@ -1,5 +1,7 @@
 #include "canvas3d_base.hpp"
 #include "util/step_importer.hpp"
+#include "util/q3d_importer.hpp"
+#include "util/str_util.hpp"
 #include "board/board_layers.hpp"
 #include "board/board.hpp"
 #include "canvas/gl_util.hpp"
@@ -330,6 +332,22 @@ void Canvas3DBase::load_3d_model(const std::string &filename, const std::string 
     if (models.count(filename))
         return;
 
+    std::string filename_lower = filename;
+    std::transform(filename_lower.begin(), filename_lower.end(), filename_lower.begin(), ::tolower);
+
+    if (has_suffix(filename_lower, ".stp") || has_suffix(filename_lower, ".step")) {
+        load_step(filename, filename_abs);
+        return;
+    } else if (has_suffix(filename_lower, ".q3do")) {
+        load_q3d(filename, filename_abs);
+        return;
+    } else {
+        std::cout << "unknown model format" << filename_abs << std::endl;
+    }
+}
+
+void Canvas3DBase::load_step(const std::string &filename, const std::string &filename_abs) 
+{
     auto faces = STEPImporter::import(filename_abs);
     {
         std::lock_guard<std::mutex> lock(models_loading_mutex);
@@ -356,6 +374,29 @@ void Canvas3DBase::load_3d_model(const std::string &filename, const std::string 
     }
 }
 
+void Canvas3DBase::load_q3d(const std::string &filename, const std::string &filename_abs)
+{
+    auto object = Q3DImporter::Object(filename_abs);
+    auto meshes = object.getRoot()->meshes();
+
+    size_t vertex_offset = face_vertex_buffer.size();
+    size_t first_index = face_index_buffer.size();
+    for (const auto &mesh : *meshes) {
+        auto color = mesh->material()->color();
+        uint8_t r = color->r(), g = color->g(), b = color->b();
+        for (const auto &triangle : *mesh->triangles()) {
+            for (const auto &v : { triangle->vertex1(), triangle->vertex2(), triangle->vertex3() }) {
+                face_vertex_buffer.emplace_back(v->x(), v->y(), v->z(), r, g, b);
+            }
+            face_index_buffer.push_back(vertex_offset++);
+            face_index_buffer.push_back(vertex_offset++);
+            face_index_buffer.push_back(vertex_offset++);
+        }
+    }
+    size_t last_index = face_index_buffer.size();
+    models.emplace(std::piecewise_construct, std::forward_as_tuple(filename),
+                   std::forward_as_tuple(first_index, last_index - first_index));
+}
 
 std::map<std::string, std::string> Canvas3DBase::get_model_filenames(Pool &pool)
 {

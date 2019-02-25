@@ -77,7 +77,6 @@ std::string ImpPackage::get_hud_text(std::set<SelectableRef> &sel)
     return s;
 }
 
-
 void ImpPackage::update_action_sensitivity()
 {
     auto sel = canvas->get_selection();

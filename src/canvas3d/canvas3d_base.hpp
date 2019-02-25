@@ -109,6 +109,8 @@ protected:
     std::set<UUID> packages_highlight;
 
     void load_3d_model(const std::string &filename, const std::string &filename_abs);
+    void load_step(const std::string &filename, const std::string &filename_abs);
+    void load_q3d(const std::string &filename, const std::string &filename_abs);
 
     std::map<std::string, std::string> get_model_filenames(class Pool &pool);
 

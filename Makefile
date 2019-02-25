@@ -1,6 +1,7 @@
 PKG_CONFIG ?= pkg-config
 BUILDDIR    = build
-PROGS       = $(addprefix $(BUILDDIR)/horizon-,imp eda)
+PROGS       = $(addprefix $(BUILDDIR)/horizon-,imp prj eda)
+FLATC       = $(shell pwd)/flatc
 
 all: $(PROGS)
 pymodule: $(BUILDDIR)/horizon.so
@@ -629,6 +630,48 @@ SRC_OCE_EXPORT = \
 	src/export_step/export_step.cpp\
 	src/util/step_importer.cpp\
 
+SRC_Q3D = \
+	src/canvas3d/canvas3d_base.cpp
+
+SRC_FLATBUFFERS = \
+	3rd_party/flatbuffers/src/code_generators.cpp\
+	3rd_party/flatbuffers/src/idl_parser.cpp\
+	3rd_party/flatbuffers/src/idl_gen_text.cpp\
+	3rd_party/flatbuffers/src/reflection.cpp\
+	3rd_party/flatbuffers/src/util.cpp
+
+SRC_FLATC = \
+	$(SRC_FLATBUFFERS)\
+	3rd_party/flatbuffers/src/flatc.cpp\
+	3rd_party/flatbuffers/src/flatc_main.cpp\
+	3rd_party/flatbuffers/src/idl_gen_cpp.cpp\
+	3rd_party/flatbuffers/src/idl_gen_cpp.o\
+	3rd_party/flatbuffers/src/idl_gen_csharp.cpp\
+	3rd_party/flatbuffers/src/idl_gen_dart.cpp\
+	3rd_party/flatbuffers/src/idl_gen_fbs.cpp\
+	3rd_party/flatbuffers/src/idl_gen_go.cpp\
+	3rd_party/flatbuffers/src/idl_gen_grpc.cpp\
+	3rd_party/flatbuffers/src/idl_gen_java.cpp\
+	3rd_party/flatbuffers/src/idl_gen_json_schema.cpp\
+	3rd_party/flatbuffers/src/idl_gen_js_ts.cpp\
+	3rd_party/flatbuffers/src/idl_gen_kotlin.cpp\
+	3rd_party/flatbuffers/src/idl_gen_lobster.cpp\
+	3rd_party/flatbuffers/src/idl_gen_lua.cpp\
+	3rd_party/flatbuffers/src/idl_gen_php.cpp\
+	3rd_party/flatbuffers/src/idl_gen_python.cpp\
+	3rd_party/flatbuffers/src/idl_gen_rust.cpp\
+	3rd_party/flatbuffers/grpc/src/compiler/cpp_generator.cpp\
+	3rd_party/flatbuffers/grpc/src/compiler/go_generator.cpp\
+	3rd_party/flatbuffers/grpc/src/compiler/java_generator.cpp\
+	3rd_party/flatbuffers/grpc/src/compiler/python_generator.cpp
+
+SRC_Q3D_FBS = \
+	3rd_party/q3d/object.fbs
+
+# The grpc SRC_FLATC files are .cc, these rules let us convert them.
+3rd_party/flatbuffers/grpc/%.cpp: 3rd_party/flatbuffers/grpc/%.cc
+	cp $< $@
+
 SRC_ALL = $(sort $(SRC_COMMON) $(SRC_IMP) $(SRC_POOL_UTIL) $(SRC_PRJ_UTIL) $(SRC_POOL_UPDATE_PARA) $(SRC_PGM_TEST) $(SRC_POOL_PRJ_MGR) $(SRC_GEN_PKG))
 
 INC = -Isrc -I3rd_party -Ibuild/gen
@@ -714,6 +757,7 @@ SRC_SHARED_GEN = $(SRC_COMMON_GEN)
 
 OBJDIR           = $(BUILDDIR)/obj
 PICOBJDIR        = $(BUILDDIR)/picobj
+FLATCOBJDIR      = $(BUILDDIR)/flatcobj
 GENDIR           = $(BUILDDIR)/gen
 MKDIR            = mkdir -p
 QUIET            = @
@@ -727,6 +771,8 @@ OBJ_COMMON       = $(addprefix $(OBJDIR)/,$(SRC_COMMON:.cpp=.o))
 OBJ_COMMON      += $(addprefix $(OBJDIR)/,$(SRC_COMMON_GEN:.cpp=.o))
 OBJ_OCE          = $(addprefix $(OBJDIR)/,$(SRC_OCE:.cpp=.o))
 OBJ_PYTHON       = $(addprefix $(PICOBJDIR)/,$(SRC_PYTHON:.cpp=.o))
+OBJ_FLATC        = $(addprefix $(FLATCOBJDIR)/,$(SRC_FLATC:.cpp=.o))
+OBJ_Q3D          = $(addprefix $(OBJDIR)/,$(SRC_Q3D:.cpp=.o))
 OBJ_SHARED       = $(addprefix $(PICOBJDIR)/,$(SRC_SHARED:.cpp=.o))
 OBJ_SHARED      += $(addprefix $(PICOBJDIR)/,$(SRC_SHARED_GEN:.cpp=.o))
 OBJ_SHARED_OCE   = $(addprefix $(PICOBJDIR)/,$(SRC_OCE_EXPORT:.cpp=.o))
@@ -740,13 +786,13 @@ OBJ_POOL_PRJ_MGR = $(addprefix $(OBJDIR)/,$(SRC_POOL_PRJ_MGR:.cpp=.o)) $(OBJ_RES
 OBJ_PGM_TEST     = $(addprefix $(OBJDIR)/,$(SRC_PGM_TEST:.cpp=.o))
 OBJ_GEN_PKG      = $(addprefix $(OBJDIR)/,$(SRC_GEN_PKG:.cpp=.o))
 
-
-
 INC_ROUTER = -I3rd_party/router/include/ -I3rd_party/router -I3rd_party
 INC_OCE ?= -I/opt/opencascade/inc/ -I/mingw64/include/oce/ -I/usr/include/oce -I/usr/include/opencascade -I${CASROOT}/include/opencascade -I/usr/local/include/OpenCASCADE
 INC_PYTHON = $(shell $(PKG_CONFIG) --cflags python3 py3cairo)
 OCE_LIBDIRS = -L/opt/opencascade/lib/ -L${CASROOT}/lib
 LDFLAGS_OCE = $(OCE_LIBDIRS) -lTKSTEP  -lTKernel  -lTKXCAF -lTKXSBase -lTKBRep -lTKCDF -lTKXDESTEP -lTKLCAF -lTKMath -lTKMesh -lTKTopAlgo -lTKPrim -lTKBO
+INC_Q3D = -I$(GENDIR)/3rd_party/q3d
+INC_FLATBUFFERS = -I3rd_party/flatbuffers/include -I3rd_party/flatbuffers/grpc
 ifeq ($(OS),Windows_NT)
 	LDFLAGS_OCE += -lTKV3d
 endif
@@ -763,6 +809,12 @@ ICONDIR = ${PREFIX}/share/icons/hicolor/
 APPSDIR = ${PREFIX}/share/applications/
 METADIR = ${PREFIX}/share/metainfo/
 INSTALL = /usr/bin/install
+SRC_Q3D_FBS_GENERATED = $(GENDIR)/$(SRC_Q3D_FBS:.fbs=_generated.h)
+
+$(SRC_Q3D_FBS_GENERATED): $(FLATC)
+
+$(SRC_Q3D_FBS_GENERATED): $(SRC_Q3D_FBS)
+	$(FLATC) --cpp --no-includes -o $(dir $@) $<
 
 src/preferences/color_presets.json: $(wildcard src/preferences/color_presets/*)
 	python3 scripts/make_color_presets.py $^ > $@
@@ -789,6 +841,7 @@ $(BUILDDIR)/gen/help_texts.hpp: scripts/make_help.py src/help_texts.txt
 
 $(BUILDDIR)/horizon-imp: $(OBJ_COMMON) $(OBJ_ROUTER) $(OBJ_OCE) $(OBJ_IMP)
 	$(ECHO) " $@"
+	$(MAKE) $(SRC_Q3D_FBS_GENERATED)
 	$(QUIET)$(CXX) $^ $(LDFLAGS) $(LDFLAGS_GUI) $(LDFLAGS_OCE) $(shell $(PKG_CONFIG) --libs $(LIBS_COMMON) gtkmm-3.0 epoxy cairomm-pdf-1.0 librsvg-2.0 libzmq libcurl) -lpodofo -o $@
 
 $(BUILDDIR)/horizon-pool: $(OBJ_COMMON) $(OBJ_POOL_UTIL)
@@ -820,6 +873,9 @@ $(OBJDIR)/%.o: %.c
 	$(ECHO) " $@"
 	$(QUIET)$(CC) -c $(INC) $(CFLAGS) $< -o $@
 
+$(FLATC): $(OBJ_FLATC)
+	$(CXX) $^ $(LDFLAGS) -o $@
+
 $(OBJDIR)/%.o: %.cpp
 	$(QUIET)$(MKDIR) $(dir $@)
 	$(ECHO) " $@"
@@ -835,13 +891,23 @@ $(PICOBJDIR)/%.o: %.cpp
 	$(ECHO) " $@"
 	$(QUIET)$(CXX) -c $(INC) $(CXXFLAGS) -fPIC -DOFFSCREEN=1 $< -o $@
 
+$(FLATCOBJDIR)/%.o: INC += $(INC_FLATBUFFERS)
+$(FLATCOBJDIR)/%.o: %.cpp
+	$(QUIET)$(MKDIR) $(dir $@)
+	$(ECHO) " $@"
+	$(QUIET)$(CXX) -c $(INC) $(CXXFLAGS) -fPIC $< -o $@
+
 $(OBJ_PYTHON): INC += $(INC_PYTHON)
 
 $(OBJ_RES): $(OBJDIR)/%.res: %.rc
 	$(QUIET)$(MKDIR) $(dir $@)
 	windres $< -O coff -o $@
 
-install: $(BUILDDIR)/horizon-imp $(BUILDDIR)/horizon-eda
+$(OBJ_Q3D): INC += $(INC_Q3D)
+$(OBJ_Q3D): INC += $(INC_FLATBUFFERS)
+$(OBJ_Q3D): $(SRC_Q3D_FBS_GENERATED)
+
+install: $(BUILDDIR)/horizon-imp $(BUILDDIR)/horizon-eda $(BUILDDIR)/horizon-prj $(BUILDDIR)/horizon-pool
 	mkdir -p $(DESTDIR)$(BINDIR)
 	$(INSTALL) -m755 $(BUILDDIR)/horizon-imp $(DESTDIR)$(BINDIR)
 	$(INSTALL) -m755 $(BUILDDIR)/horizon-eda $(DESTDIR)$(BINDIR)
@@ -861,13 +927,16 @@ install: $(BUILDDIR)/horizon-imp $(BUILDDIR)/horizon-eda
 	$(INSTALL) -m644 org.horizon_eda.HorizonEDA.metainfo.xml $(DESTDIR)$(METADIR)
 
 
-clean: clean_router clean_oce clean_res
+src/canvas3d/canvas3d_base.cpp: $(SRC_Q3D_FBS_GENERATED)
+
+clean: clean_router clean_oce clean_res clean_q3d
 	$(RM) $(OBJ_ALL) $(BUILDDIR)/horizon-imp $(BUILDDIR)/horizon-pool $(BUILDDIR)/horizon-prj $(BUILDDIR)/horizon-pool-mgr $(BUILDDIR)/horizon-prj-mgr $(BUILDDIR)/horizon-pgm-test $(BUILDDIR)/horizon-gen-pkg $(BUILDDIR)/horizon-eda $(OBJ_ALL:.o=.d) $(GENDIR)/resources.cpp $(GENDIR)/version_gen.cpp $(OBJ_COMMON) $(OBJ_COMMON:.o=.d)
 	$(RM) $(BUILDDIR)/horizon.so
 	$(RM) $(GENDIR)/help_texts.hpp
 	$(RM) $(GENDIR)/help_texts.cpp
 	$(RM) $(OBJ_SHARED) $(OBJ_PYTHON) $(OBJ_SHARED:.o=.d) $(OBJ_PYTHON:.o=.d)
 	$(RM) -r __pycache__
+
 
 clean_router:
 	$(RM) $(OBJ_ROUTER) $(OBJ_ROUTER:.o=.d)
@@ -878,8 +947,15 @@ clean_oce:
 clean_res:
 	$(RM) $(OBJ_RES)
 
+clean_flatc:
+	rm -f $(OBJ_FLATC)
+
+clean_q3d:
+	rm -f $(SRC_Q3D_FBS_GENERATED) $(OBJ_FLATC) $(OBJ_FLATC:.o=.d) 3rd_party/flatbuffers/grpc/src/compiler/*cpp
+
 -include  $(OBJ_ALL:.o=.d)
 -include  $(OBJ_ROUTER:.o=.d)
 -include  $(OBJ_OCE:.o=.d)
+-include  $(OBJ_FLATC:.o=.d)
 
-.PHONY: clean clean_router clean_oce clean_res install
+.PHONY: clean clean_router clean_oce clean_res clean_q3d install
