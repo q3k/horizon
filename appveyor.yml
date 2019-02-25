@@ -19,6 +19,8 @@ before_build:
 
 build_script:
     - cd %APPVEYOR_BUILD_FOLDER%
+    - git submodule init
+    - git submodule update
     - echo %cd%
     - dir
     - bash -c "cd $APPVEYOR_BUILD_FOLDER && make -j2 && ./make_bindist.sh"
